@@ -1,5 +1,6 @@
-// Client side implementation of UDP client-server model
-//https://www.geeksforgeeks.org/udp-server-client-implementation-c/
+//Trabalho 01: Fundamentos de Redes
+//Pedro Lucas - 13/0035581
+//Vinicius
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,41 +11,33 @@
 #include <netinet/in.h>
  
 #define PORT     6100
-#define MAXLINE 1024
- 
-// Driver code
-int main() {
-    int sockfd;
-    char buffer[MAXLINE];
-    char *hello = "Hello from pedro";
-    struct sockaddr_in     servaddr;
- 
-    // Creating socket file descriptor
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-        perror("socket creation failed");
+
+int main(int argc, char *argv[]) {
+    int n_sock, n, tamanho;
+    char buffer[2048];
+    char *mensagem = argv[1];
+    struct sockaddr_in end_serv;
+//                        Address Family   Datagram
+    if ( (n_sock = socket(AF_INET,         SOCK_DGRAM, 0)) < 0 ) {
+        perror("Falha na criacao do socket");
         exit(EXIT_FAILURE);
     }
- 
-    memset(&servaddr, 0, sizeof(servaddr));
+    
+    /*
+    *	Escrever aqui o codigo do trabalho utilizando as funções de enviar e receber abaixo!!!
+    */
+    
+    end_serv.sin_family = AF_INET;
+    end_serv.sin_port = htons(PORT);
+    end_serv.sin_addr.s_addr = INADDR_ANY;
      
-    // Filling server information
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(PORT);
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-     
-    int n, len;
-     
-    sendto(sockfd, (const char *)hello, strlen(hello),
-        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
-            sizeof(servaddr));
-    printf("Hello message sent.\n");
+    sendto(n_sock, (const char *)mensagem, strlen(mensagem), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+    //printf("mensagem message sent.\n");
          
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
-                MSG_WAITALL, (struct sockaddr *) &servaddr,
-                &len);
+    n = recvfrom(n_sock, (char *)buffer, 2048, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
     buffer[n] = '\0';
-    printf("Server : %s\n", buffer);
+    //printf("Server : %s\n", buffer);
  
-    close(sockfd);
+    close(n_sock);
     return 0;
 }
