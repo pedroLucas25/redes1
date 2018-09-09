@@ -19,7 +19,7 @@
 
 int main(int argc, char *argv[]) {
 	FILE* arq;
-    unsigned int n_sock, n, tamanho, tamArq, crc, j, k, i, l, contVirg=0;
+    int n_sock, n, tamanho, tamArq, crc, j, k, i, l, contVirg=0, tOut=0;
     char buffer[MAXLINE], tamstr[MAXLINE], crcstr[MAXLINE], msgEnv[MAXLINE] = {}, *base64out, Linha[MAXLINE], crcRecebido[MAXLINE];
     char conteudoArquivo[MAXLINE], *decRecebido, crcHX[MAXLINE] = {"0x"}, nomeRecebido[MAXLINE];
     struct sockaddr_in end_serv;
@@ -140,9 +140,28 @@ int main(int argc, char *argv[]) {
   		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
   		
   		fclose(arq);    	
-    }
-     
+    } else if(strcmp(argv[1],"-c") == 0){ 
+    	base64out = base64_encode(argv[2]);
+    	
+    	strcat(msgEnv, "cal,0,0xFFFFFFFF,,");
+    	strcat(msgEnv, base64out);
+    	
+    	//do{
+    		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+    	//	sleep(1);
+		//	if(tOut>=3){
+		//		printf("Erro! Tempo excedido!");
+		//		return 1;
+		//	}
+    	//	tOut++;
+		//}while(tOut<=3);
+    	
+    	n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
+    	buffer[n] = '\0';
+    	
+    	printf("%s\n", buffer);
     
+    }   
  
     close(n_sock);
     return 0;

@@ -148,7 +148,7 @@ int main() {
     	
     	base64out = base64_encode(Linha);
     	
-    	strcat(msgEnv, "env,");
+    	strcat(msgEnv, "res,");
     	strcat(msgEnv, tamstr);
     	strcat(msgEnv, ",");
     	strcat(msgEnv, "0x");
@@ -165,6 +165,45 @@ int main() {
     		buffer[n] = '\0';
     	}while(buffer[0] != 'p');
 		    
+    } else if(buffer[0] == 'c'){
+    	k=0;
+    
+		for(i=0;i<n;i++){
+			if(buffer[i] == ','){
+				contVirg++;
+			}
+
+			if(contVirg == 4){
+				nomeRecebido[k] = buffer[i+1];
+				k++;
+			} 			
+		}
+		
+		decRecebido = base64_decode(nomeRecebido);
+    
+    	arq = fopen(decRecebido, "rb");
+
+  	    if (arq == NULL){  // Se houve erro na abertura
+     		perror("Problemas na abertura do arquivo\n");
+     		strcat(msgEnv, "res,-1,0xFFFFFFFF,");
+     		strcat(msgEnv, nomeRecebido);
+     		sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+     		return EXIT_FAILURE;
+  		}
+  		
+  		fgets(Linha, MAXLINE, arq);  // o 'fgets' lê até 99 caracteres ou até o '\n'
+      	Linha[strlen(Linha)-1] = '\0'; 	
+    	crc = xcrc32(Linha, strlen(Linha), 0);// crc32 em %d
+    	snprintf(crcstr, MAXLINE, "%x", crc);//converte crc de inteiro para string
+    	
+    	strcat(msgEnv, "res,0,");
+    	strcat(msgEnv, "0x");
+    	strcat(msgEnv, crcstr);
+    	strcat(msgEnv, ",");
+    	strcat(msgEnv, nomeRecebido);
+    	
+    	sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+    
     }
      
     return 0;
