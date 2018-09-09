@@ -1,5 +1,3 @@
-// Server side implementation of UDP client-server model
-//https://www.geeksforgeeks.org/udp-server-client-implementation-c/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -41,8 +39,7 @@ int main() {
     len = sizeof(cliaddr);  
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
     buffer[n] = '\0';
-    //printf("%s\n", buffer);
-    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
     if(buffer[0] == 'e'){
     	j=0;
     	k=0;
@@ -111,63 +108,66 @@ int main() {
 		}   
 		
 		sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-			
+		
+		fclose(arq);
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////			
     } else if(buffer[0] == 'r'){
-    	k=0;
-    
-		for(i=0;i<n;i++){
-			if(buffer[i] == ','){
-				contVirg++;
+		do{
+			k=0;
+		
+			for(i=0;i<n;i++){
+				if(buffer[i] == ','){
+					contVirg++;
+				}
+
+				if(contVirg == 4){
+					nomeRecebido[k] = buffer[i+1];
+					k++;
+				} 			
 			}
+			
+			decRecebido = base64_decode(nomeRecebido);
+			
+			arq = fopen(decRecebido, "r");
 
-			if(contVirg == 4){
-				nomeRecebido[k] = buffer[i+1];
-				k++;
-			} 			
-		}
-		
-		decRecebido = base64_decode(nomeRecebido);
-		
-		arq = fopen(decRecebido, "rb");
-
-  	    if (arq == NULL){  // Se houve erro na abertura
-     		perror("Problemas na abertura do arquivo\n");
-     		strcat(msgEnv, "res,-1,0xFFFFFFFF,");
-     		strcat(msgEnv, nomeRecebido);
-     		sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-     		return EXIT_FAILURE;
-  		}
-  		
-  		fseek(arq, 0, SEEK_END);
-    	tamArq = ftell(arq);//Tamanho do arquivo %d
-    	fseek(arq, 0, SEEK_SET);
-    	
-    	fgets(Linha, MAXLINE, arq);  // o 'fgets' lê até 99 caracteres ou até o '\n'
-      	Linha[strlen(Linha)-1] = '\0'; 	
-    	crc = xcrc32(Linha, strlen(Linha), 0);// crc32 em %d
-    	
-    	snprintf(tamstr, MAXLINE, "%d", tamArq);//converte tamArq de inteiro para string
-    	snprintf(crcstr, MAXLINE, "%x", crc);//converte crc de inteiro para string 
-    	
-    	base64out = base64_encode(Linha);
-    	
-    	strcat(msgEnv, "res,");
-    	strcat(msgEnv, tamstr);
-    	strcat(msgEnv, ",");
-    	strcat(msgEnv, "0x");
-    	strcat(msgEnv, crcstr);
-    	strcat(msgEnv, ",");
-    	strcat(msgEnv, decRecebido);
-    	strcat(msgEnv, ",");
-    	strcat(msgEnv, base64out); 
-    	
-    	sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); 
-    	
-    	do{
-    		n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
+	  	    if (arq == NULL){  // Se houve erro na abertura
+		 		perror("Problemas na abertura do arquivo\n");
+		 		strcat(msgEnv, "res,-1,0xFFFFFFFF,");
+		 		strcat(msgEnv, nomeRecebido);
+		 		sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+		 		return EXIT_FAILURE;
+	  		}
+	  		
+	  		fseek(arq, 0, SEEK_END);
+			tamArq = ftell(arq);//Tamanho do arquivo %d
+			fseek(arq, 0, SEEK_SET);
+			
+			fgets(Linha, MAXLINE, arq);  // o 'fgets' lê até 99 caracteres ou até o '\n'
+		  	Linha[strlen(Linha)-1] = '\0'; 	
+			crc = xcrc32(Linha, strlen(Linha), 0);// crc32 em %d
+			
+			snprintf(tamstr, MAXLINE, "%d", tamArq);//converte tamArq de inteiro para string
+			snprintf(crcstr, MAXLINE, "%x", crc);//converte crc de inteiro para string 
+			
+			base64out = base64_encode(Linha);
+			
+			strcat(msgEnv, "res,");
+			strcat(msgEnv, tamstr);
+			strcat(msgEnv, ",");
+			strcat(msgEnv, "0x");
+			strcat(msgEnv, crcstr);
+			strcat(msgEnv, ",");
+			strcat(msgEnv, decRecebido);
+			strcat(msgEnv, ",");
+			strcat(msgEnv, base64out); 
+			
+			sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); 
+			n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
     		buffer[n] = '\0';
-    	}while(buffer[0] != 'p');
-		    
+    		fclose(arq);
+		}while(buffer[0] != '!');
+    	
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////		    
     } else if(buffer[0] == 'c'){
     	k=0;
     
@@ -206,7 +206,8 @@ int main() {
     	strcat(msgEnv, nomeRecebido);
     	
     	sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-    
+    	
+    	fclose(arq);
     }
      
     return 0;

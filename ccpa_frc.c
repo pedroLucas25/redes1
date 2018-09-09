@@ -19,7 +19,7 @@
 
 int main(int argc, char *argv[]) {
 	FILE* arq;
-    int n_sock, n, tamanho, tamArq, crc, j, k, i, l, contVirg=0, tOut=0;
+    int n_sock, n, tamanho, tamArq, crc, j, k, i, l, m, contVirg=0, tOut=0;
     char buffer[MAXLINE], tamstr[MAXLINE], crcstr[MAXLINE], msgEnv[MAXLINE] = {}, *base64out, Linha[MAXLINE], crcRecebido[MAXLINE];
     char conteudoArquivo[MAXLINE], *decRecebido, crcHX[MAXLINE] = {"0x"}, nomeRecebido[MAXLINE], er[MAXLINE];
     struct sockaddr_in end_serv;
@@ -140,49 +140,76 @@ int main(int argc, char *argv[]) {
     	strcat(msgEnv, "rec,0,0xFFFFFFFF,,");
     	strcat(msgEnv, base64out);
     	
-    	sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
-    
-    	n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
-    	buffer[n] = '\0';
-    	j=0;l=0;k=0;
+    	do{
+    		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+    		if((n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho))<=0){tOut++;}
+    		else {break;}
+    		sleep(1);
+			if(tOut>=3){
+				printf("Erro! Tempo excedido!");
+				return 1;
+			}
+		}while(tOut<=3);
+		
+    	do{
+    		buffer[n] = '\0';
+			j=0;l=0;k=0;m=0;
+			
+			for(i=0;i<n;i++){
+				if(buffer[i] == ','){
+					contVirg++;
+				}
+				
+				if(contVirg == 1){
+					er[m] = buffer[i];
+					m++;
+				}
+				
+				if(contVirg == 2){
+					crcRecebido[j] = buffer[i+1];
+					j++;
+				}
+				
+				if(contVirg == 3){
+					nomeRecebido[k] = buffer[i+1];
+					k++;
+				}
+				
+				if(contVirg >= 4){
+					conteudoArquivo[l] = buffer[i+1];
+					l++;
+				}
+			}
+			
+			crcRecebido[strlen(crcRecebido)-1] = '\0';
+			nomeRecebido[strlen(nomeRecebido)-1] = '\0';
+			er[strlen(er)-1] = '\0';
+			
+			if(strcmp(er,"-1") == 0){printf("Ocorreu um erro no servidor!\n");return 1;}
+			
+			decRecebido = base64_decode(conteudoArquivo);
+			crc = xcrc32(decRecebido, strlen(decRecebido), 0);
+			snprintf(crcstr, MAXLINE, "%x", crc);
+			strcat(crcHX, crcstr);
+			
+			for(i=0;i<strlen(nomeRecebido);i++){
+	  			if(nomeRecebido[i] == '.'){
+	  				nomeRecebido[i] = '\0';
+	  			}
+	  		}
+	  		
+	  		if(strcmp(crcRecebido,crcHX) != 0){
+	  			sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+	  			n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);  
+	  			tOut++;		
+	  		} else {break;}
+	  		
+	  		if(tOut>=3){
+				printf("Erro! Tempo excedido!");
+				return 1;
+			}
     	
-    	for(i=0;i<n;i++){
-    		if(buffer[i] == ','){
-    			contVirg++;
-    		}
-    		
-    		if(contVirg == 2){
-    			crcRecebido[j] = buffer[i+1];
-    			j++;
-    		}
-    		
-    		if(contVirg == 3){
-    			nomeRecebido[k] = buffer[i+1];
-    			k++;
-    		}
-    		
-    		if(contVirg >= 4){
-    			conteudoArquivo[l] = buffer[i+1];
-    			l++;
-    		}
-    	}
-    	
-    	crcRecebido[strlen(crcRecebido)-1] = '\0';
-    	nomeRecebido[strlen(nomeRecebido)-1] = '\0';
-    	decRecebido = base64_decode(conteudoArquivo);
-    	crc = xcrc32(decRecebido, strlen(decRecebido), 0);
-    	snprintf(crcstr, MAXLINE, "%x", crc);
-    	strcat(crcHX, crcstr);
-    	
-    	for(i=0;i<strlen(nomeRecebido);i++){
-  			if(nomeRecebido[i] == '.'){
-  				nomeRecebido[i] = '\0';
-  			}
-  		}
-    	
-    	while(strcmp(crcRecebido,crcHX) != 0){
-    		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));    	
-    	}
+    	}while(strcmp(crcRecebido,crcHX) != 0 || tOut<=3);
     	
     	arq = fopen(strcat(nomeRecebido,".bin"), "wb");
 
@@ -193,9 +220,11 @@ int main(int argc, char *argv[]) {
   		
   		fwrite(decRecebido, sizeof(char), strlen(decRecebido), arq);
   		
-  		msgEnv[0] = 'p';
+  		msgEnv[0] = '!';
   		
   		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+  		
+  		printf("Operacao concluida com sucesso!\n");
   		
   		fclose(arq); 
 /////////////////////////////////////////////////////////Concluído////////////////////////////////////////////////////////////////////////////////////// 		   	
