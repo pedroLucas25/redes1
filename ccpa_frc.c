@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 	FILE* arq;
     int n_sock, n, tamanho, tamArq, crc, j, k, i, l, contVirg=0, tOut=0;
     char buffer[MAXLINE], tamstr[MAXLINE], crcstr[MAXLINE], msgEnv[MAXLINE] = {}, *base64out, Linha[MAXLINE], crcRecebido[MAXLINE];
-    char conteudoArquivo[MAXLINE], *decRecebido, crcHX[MAXLINE] = {"0x"}, nomeRecebido[MAXLINE];
+    char conteudoArquivo[MAXLINE], *decRecebido, crcHX[MAXLINE] = {"0x"}, nomeRecebido[MAXLINE], er[MAXLINE];
     struct sockaddr_in end_serv;
 //                        Address Family   Datagram
     if ((n_sock = socket(AF_INET,         SOCK_DGRAM, 0)) < 0 ) {
@@ -146,20 +146,43 @@ int main(int argc, char *argv[]) {
     	strcat(msgEnv, "cal,0,0xFFFFFFFF,,");
     	strcat(msgEnv, base64out);
     	
-    	//do{
+    	do{
     		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
-    	//	sleep(1);
-		//	if(tOut>=3){
-		//		printf("Erro! Tempo excedido!");
-		//		return 1;
-		//	}
-    	//	tOut++;
-		//}while(tOut<=3);
-    	
-    	n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
-    	buffer[n] = '\0';
-    	
-    	printf("%s\n", buffer);
+    		if((n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho))<=0){tOut++;}
+    		else {break;}
+    		sleep(1);
+			if(tOut>=3){
+				printf("Erro! Tempo excedido!");
+				return 1;
+			}
+		}while(tOut<=3);
+		
+		buffer[n] = '\0'; 
+		k=0;j=0;
+		
+		for(i=0;i<n;i++){
+			if(buffer[i] == ','){
+				contVirg++;
+			}
+
+			if(contVirg == 1){
+				er[k] = buffer[i+1];
+				k++;
+			}
+			
+			if(contVirg == 2){
+    			crcRecebido[j] = buffer[i+1];
+    			j++;
+    		}
+		
+		}
+		
+		er[strlen(er)-1] = '\0';
+		crcRecebido[strlen(crcRecebido)-1] = '\0';
+		
+		if(strcmp(er,"-1") == 0){printf("Ocorreu um erro no servidor!\n");return 1;}
+		   	
+    	printf("CRC32 calculado pelo servidor: %s\n", crcRecebido);
     
     }   
  
