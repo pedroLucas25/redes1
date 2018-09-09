@@ -19,8 +19,9 @@
 
 int main(int argc, char *argv[]) {
 	FILE* arq;
-    unsigned int n_sock, n, tamanho, tamArq, crc, entInt;
-    char buffer[MAXLINE], tamstr[MAXLINE], crcstr[MAXLINE], msgEnv[MAXLINE], *base64out, Linha[MAXLINE];
+    unsigned int n_sock, n, tamanho, tamArq, crc, j, k, i, l, contVirg=0;
+    char buffer[MAXLINE], tamstr[MAXLINE], crcstr[MAXLINE], msgEnv[MAXLINE] = {}, *base64out, Linha[MAXLINE], crcRecebido[MAXLINE];
+    char conteudoArquivo[MAXLINE], *decRecebido, crcHX[MAXLINE] = {"0x"}, nomeRecebido[MAXLINE];
     struct sockaddr_in end_serv;
 //                        Address Family   Datagram
     if ((n_sock = socket(AF_INET,         SOCK_DGRAM, 0)) < 0 ) {
@@ -53,8 +54,7 @@ int main(int argc, char *argv[]) {
     	crc = xcrc32(Linha, strlen(Linha), 0);// crc32 em %d
     	
     	snprintf(tamstr, MAXLINE, "%d", tamArq);//converte tamArq de inteiro para string
-    	snprintf(crcstr, MAXLINE, "%x", crc);//converte crc de inteiro para string   
-    	//entInt = atoi(entBin);
+    	snprintf(crcstr, MAXLINE, "%x", crc);//converte crc de inteiro para string 
     	
     	base64out = base64_encode(Linha);	
     	
@@ -66,16 +66,84 @@ int main(int argc, char *argv[]) {
     	strcat(msgEnv, ",");
     	strcat(msgEnv, argv[2]);
     	strcat(msgEnv, ",");
-    	strcat(msgEnv, base64out);   	
+    	strcat(msgEnv, base64out); 
+    	
+    	sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+         
+    	n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
+    	buffer[n] = '\0';
+    	printf("%s\n", buffer); 
+    	    	
+    	fclose(arq);
+    	 	
+    } else if(strcmp(argv[1],"-r") == 0){    
+    	base64out = base64_encode(argv[2]);
+    	
+    	strcat(msgEnv, "rec,0,0xFFFFFFFF,,");
+    	strcat(msgEnv, base64out);
+    	
+    	sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+    
+    	n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
+    	buffer[n] = '\0';
+    	j=0;l=0;k=0;
+    	
+    	for(i=0;i<n;i++){
+    		if(buffer[i] == ','){
+    			contVirg++;
+    		}
+    		
+    		if(contVirg == 2){
+    			crcRecebido[j] = buffer[i+1];
+    			j++;
+    		}
+    		
+    		if(contVirg == 3){
+    			nomeRecebido[k] = buffer[i+1];
+    			k++;
+    		}
+    		
+    		if(contVirg >= 4){
+    			conteudoArquivo[l] = buffer[i+1];
+    			l++;
+    		}
+    	}
+    	
+    	crcRecebido[strlen(crcRecebido)-1] = '\0';
+    	nomeRecebido[strlen(nomeRecebido)-1] = '\0';
+    	decRecebido = base64_decode(conteudoArquivo);
+    	crc = xcrc32(decRecebido, strlen(decRecebido), 0);
+    	snprintf(crcstr, MAXLINE, "%x", crc);
+    	strcat(crcHX, crcstr);
+    	
+    	for(i=0;i<strlen(nomeRecebido);i++){
+  			if(nomeRecebido[i] == '.'){
+  				nomeRecebido[i] = '\0';
+  			}
+  		}
+    	
+    	while(strcmp(crcRecebido,crcHX) != 0){
+    		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));    	
+    	}
+    	
+    	arq = fopen(strcat(nomeRecebido,".bin"), "wb");
+
+  	    if (arq == NULL){  // Se houve erro na abertura
+	 		perror("Problemas na abertura do arquivo\n");
+	 		return EXIT_FAILURE;
+  		}
+  		
+  		fwrite(decRecebido, sizeof(char), strlen(decRecebido), arq);
+  		
+  		msgEnv[0] = 'p';
+  		
+  		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+  		
+  		fclose(arq);    	
     }
      
-    sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
-         
-    n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
-    buffer[n] = '\0';
-    printf("%s\n", buffer);
+    
  
     close(n_sock);
-    fclose(arq);
     return 0;
 }
