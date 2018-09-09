@@ -32,11 +32,7 @@ int main(int argc, char *argv[]) {
     end_serv.sin_family = AF_INET;
     end_serv.sin_port = htons(porta);
     end_serv.sin_addr.s_addr = INADDR_ANY;
-    
-    /*
-    *	Escrever aqui o codigo do trabalho utilizando as funções de enviar e receber abaixo!!!
-    */
-    
+//////////////////////////////////////////////Concluído/////////////////////////////////////////////////////////////////////////////////////    
     if(strcmp(argv[1],"-e") == 0){
     	arq = fopen(argv[2], "rb");
 
@@ -68,14 +64,76 @@ int main(int argc, char *argv[]) {
     	strcat(msgEnv, ",");
     	strcat(msgEnv, base64out); 
     	
-    	sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
-         
-    	n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho);
+    	do{
+    		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+    		if((n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho))<=0){tOut++;}
+    		else {break;}
+    		sleep(1);
+			if(tOut>=3){
+				printf("Erro! Tempo excedido!");
+				return 1;
+			}
+		}while(tOut<=3);
+		
     	buffer[n] = '\0';
-    	printf("%s\n", buffer); 
+    	k=0;j=0;
+		
+		for(i=0;i<n;i++){
+			if(buffer[i] == ','){
+				contVirg++;
+			}
+
+			if(contVirg == 1){
+				er[k] = buffer[i+1];
+				k++;
+			}
+			
+			if(contVirg == 2){
+    			crcRecebido[j] = buffer[i+1];
+    			j++;
+    		}		
+		}
+		
+		er[strlen(er)-1] = '\0';
+		crcRecebido[strlen(crcRecebido)-1] = '\0';
+		
+		strcat(crcHX, crcstr);
+		
+		if(strcmp(crcHX, crcRecebido) != 0){
+			do{
+				sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
+				if((n = recvfrom(n_sock, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &end_serv, &tamanho))<=0){
+					tOut++;
+					buffer[n] = '\0';
+					k=0;j=0;
+					
+					for(i=0;i<n;i++){
+						if(buffer[i] == ','){
+							contVirg++;
+						}
+						
+						if(contVirg == 2){
+							crcRecebido[j] = buffer[i+1];
+							j++;
+						}		
+					}
+					crcRecebido[strlen(crcRecebido)-1] = '\0';
+				}
+				else {break;}
+				sleep(1);
+				if(tOut>=3){
+					printf("Erro! Tempo excedido!");
+					return 1;
+				}
+			}while(tOut<=3 || strcmp(crcHX,crcRecebido)!=0);		
+		}
+    	
+    	if(strcmp(er,"-1") == 0){printf("Ocorreu um erro no servidor!\n");return 1;}
+    	
+    	printf("Opercao concluida com sucesso!\n");
     	    	
     	fclose(arq);
-    	 	
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    	 	
     } else if(strcmp(argv[1],"-r") == 0){    
     	base64out = base64_encode(argv[2]);
     	
@@ -139,7 +197,8 @@ int main(int argc, char *argv[]) {
   		
   		sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
   		
-  		fclose(arq);    	
+  		fclose(arq); 
+/////////////////////////////////////////////////////////Concluído////////////////////////////////////////////////////////////////////////////////////// 		   	
     } else if(strcmp(argv[1],"-c") == 0){ 
     	base64out = base64_encode(argv[2]);
     	
@@ -184,8 +243,8 @@ int main(int argc, char *argv[]) {
 		   	
     	printf("CRC32 calculado pelo servidor: %s\n", crcRecebido);
     
-    }   
- 
+    } else {printf("Opcao digitada invalida!!!\n");}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     close(n_sock);
     return 0;
 }
