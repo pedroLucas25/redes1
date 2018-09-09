@@ -21,13 +21,16 @@ int main(int argc, char *argv[]) {
 	FILE* arq;
     unsigned int n_sock, n, tamanho, tamArq, crc, entInt;
     char buffer[MAXLINE], tamstr[MAXLINE], crcstr[MAXLINE], msgEnv[MAXLINE], *base64out, Linha[MAXLINE];
-    char *mensagem = "ola mundo, meu nome eh pedro!";
     struct sockaddr_in end_serv;
 //                        Address Family   Datagram
     if ((n_sock = socket(AF_INET,         SOCK_DGRAM, 0)) < 0 ) {
         perror("Falha na criacao do socket");
         exit(EXIT_FAILURE);
     }
+    
+    end_serv.sin_family = AF_INET;
+    end_serv.sin_port = htons(porta);
+    end_serv.sin_addr.s_addr = INADDR_ANY;
     
     /*
     *	Escrever aqui o codigo do trabalho utilizando as funções de enviar e receber abaixo!!!
@@ -65,10 +68,6 @@ int main(int argc, char *argv[]) {
     	strcat(msgEnv, ",");
     	strcat(msgEnv, base64out);   	
     }
-    
-    end_serv.sin_family = AF_INET;
-    end_serv.sin_port = htons(porta);
-    end_serv.sin_addr.s_addr = INADDR_ANY;
      
     sendto(n_sock, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &end_serv, sizeof(end_serv));
          
