@@ -10,6 +10,6 @@ Esse trabalho apresenta dois arquivos "scpa_frc.c" e "ccpa_frc.c", escritos em l
 #### Compilar e executar
 
 * Para o funcionamento de ambos os arquivos, complie os arquivos com gcc e execute-os na seguinte ordem:
-	**./[arquivo servidor]**
+	**./[arquivo servidor]**\n
 	**./[arquivo cliente] -[opcao a ser executada] [nome do arquivo]**
 Caso as opções estejam corretas, apenas o cliente exibirá uma resposta de operação concluída.
