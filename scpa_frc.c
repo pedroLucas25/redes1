@@ -133,12 +133,12 @@ int main() {
 
 			arq = fopen(decRecebido, "r");
 
-	  	    if (arq == NULL){  // Se houve erro na abertura
-		 		perror("Problemas na abertura do arquivo\n");
-		 		strcat(msgEnv, "res,-1,0xFFFFFFFF,");
-		 		strcat(msgEnv, nomeRecebido);
-		 		sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-		 		return EXIT_FAILURE;
+  	    if (arq == NULL){  // Se houve erro na abertura
+				 		perror("Problemas na abertura do arquivo\n");
+				 		strcat(msgEnv, "res,-1,0xFFFFFFFF,");
+				 		strcat(msgEnv, nomeRecebido);
+				 		sendto(sockfd, (const char *)msgEnv, strlen(msgEnv), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+				 		return EXIT_FAILURE;
 	  		}
 
 	  		fseek(arq, 0, SEEK_END);

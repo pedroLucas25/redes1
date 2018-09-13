@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 				}
 
 				if(contVirg == 1){
-					er[m] = buffer[i];
+					er[m] = buffer[i+1];
 					m++;
 				}
 
